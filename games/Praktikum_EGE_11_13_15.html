@@ -107,6 +107,32 @@
         font-size: 14px
     }
 
+    #check-answers {
+        margin-top: 28px;
+        padding: 14px 22px;
+        border: 0;
+        border-radius: 8px;
+        background: #24556a;
+        color: white;
+        font: inherit;
+        font-weight: bold;
+        cursor: pointer
+    }
+
+    #check-answers:hover { background: #166182 }
+    #check-answers:focus-visible, input:focus-visible { outline: 3px solid #d58b32; outline-offset: 3px }
+    #results { margin-top: 20px; padding: 18px; border-radius: 10px; background: #edf6f7 }
+    #results[hidden] { display: none }
+    article.answer-correct { border-color: #27804a; background: #f2faf4 }
+    article.answer-incorrect { border-color: #b43a35; background: #fff6f5 }
+    article.answer-partial { border-color: #d58b32; background: #fff9ed }
+    article.answer-empty { border-color: #a66a13; background: #fffaf0 }
+    .answer-feedback { margin: 12px 0 0; font-weight: bold }
+    .answer-correct .answer-feedback { color: #176b38 }
+    .answer-incorrect .answer-feedback { color: #a12c27 }
+    .answer-partial .answer-feedback { color: #80500d }
+    .answer-empty .answer-feedback { color: #80500d }
+
     @media print {
         body {
             background: white;
@@ -151,6 +177,7 @@
             background: white;
             border: 1px solid #ccc
         }
+        #check-answers { display: none }
     }
 </style>
 <main>
@@ -306,6 +333,44 @@
         <p>Ответ: <input aria-label="Ответ на задание 15"></p><label>Обоснование<textarea
                 aria-label="Обоснование задания 15"></textarea></label>
     </article>
+    <button id="check-answers" type="button">Проверить ответы</button>
+    <section id="results" aria-live="polite" aria-atomic="true" hidden></section>
 </main>
+
+<script>
+    (() => {
+        const keys = ['123', '234', '24', '23', '12', '3', '235', '134', '13', '1245', '135', '124', '45', '14', '23'];
+        const articles = [...document.querySelectorAll('article')];
+        const result = document.getElementById('results');
+
+        document.getElementById('check-answers').addEventListener('click', () => {
+            let score = 0;
+            let empty = 0;
+            let partial = 0;
+            articles.forEach((article, index) => {
+                const input = article.querySelector('input');
+                const answer = input.value;
+                const key = keys[index];
+                const digits = answer.match(/[0-9]/g) || [];
+                const strict = /^[0-9]+$/.test(answer);
+                const matched = [...key].filter((digit, position) => digits[position] === digit).length;
+                article.classList.remove('answer-correct', 'answer-incorrect', 'answer-partial', 'answer-empty');
+                article.querySelector('.answer-feedback')?.remove();
+                const status = answer === '' ? 'empty' : (strict && answer === key ? 'correct' : (matched > 0 ? 'partial' : 'incorrect'));
+                if (status === 'correct') score++;
+                if (status === 'empty') empty++;
+                if (status === 'partial') partial++;
+                article.classList.add(`answer-${status}`);
+                const feedback = document.createElement('p');
+                feedback.className = 'answer-feedback';
+                feedback.textContent = status === 'correct' ? 'Верно. Начислен 1 балл.' : status === 'empty' ? `Нет ответа. Правильный ответ: ${key}.` : status === 'partial' ? `Частично: совпало ${matched} из ${key.length} цифр. Балл не начислен. Ключ: ${key}.` : `Неверно. Балл не начислен. Ключ: ${key}.`;
+                article.append(feedback);
+            });
+            result.innerHTML = `<h2 style="margin-top:0">Итоги</h2><p><strong>${score} из ${articles.length} баллов</strong> · частичных: ${partial} · пустых: ${empty} · неверных: ${articles.length - score - partial - empty}</p><p>Балл начисляется только за точное совпадение ответа с ключом.</p>`;
+            result.hidden = false;
+            result.focus?.();
+        });
+    })();
+</script>
 
 </html>
